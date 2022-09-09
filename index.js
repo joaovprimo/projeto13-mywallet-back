@@ -37,7 +37,7 @@ const singUpSchema = joi.object({
 app.post('/singup', async(req,res)=>{
     const {email, senha, nome} = req.body;
     const validation = singUpSchema.validate({email, senha, nome}, {abortEarly: false});
-
+    
     if(validation.error){
         return res.status(422).send('algo de errado no validation 1');
     }
@@ -46,7 +46,7 @@ app.post('/singup', async(req,res)=>{
      try{
         const user = await db.collection('users').findOne({email});
         if(!user){
-            db.collection('users').insertOne({
+           db.collection('users').insertOne({
                 nome,
                 email,
                 senha: hashPassword
@@ -58,7 +58,7 @@ app.post('/singup', async(req,res)=>{
     }
      catch(error){
         console.log(error);
-      return res.sendStatus(500);
+      return res.sendStatus(error);
      }
 
      return res.sendStatus(201);     
@@ -66,8 +66,33 @@ app.post('/singup', async(req,res)=>{
 
 app.post('/singin', async(req, res)=>{
     const {email, senha} = req.body;
-    
 
+    const validation = singInSchema.validate({email, senha}, {abortEarly: false});
+    
+    if(validation.error){
+        return res.status(422).send('algo de errado no validation 2');
+    }
+
+try{
+    const user = await db.collection('users').findOne({email});
+    console.log(user);
+    const password = user ? bcrypt.compareSync(senha, user.senha): false;
+    console.log(password);
+    if(user && password){
+        const token = uuid();
+        db.collection('sessions').insertOne({
+         token,
+         userID: user._id
+        }) 
+        return res.send(token);
+    }else{     
+        return res.sendStatus(401);
+    }}
+    catch(error){
+        console.log(error);
+      return res.sendStatus(error);
+
+    }
 })
 
 
