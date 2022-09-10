@@ -8,7 +8,6 @@ import bcrypt from 'bcrypt';
 import {MongoClient} from 'mongodb';
 
 dotenv.config();
-const token = uuid();
 
 const app = express();
 app.use(express.json());
@@ -24,13 +23,21 @@ mongoClient.connect(()=>{
 const singInSchema = joi.object({
     email: joi.string().required(),
     senha: joi.string().required()
-})
+});
 
 const singUpSchema = joi.object({
     email: joi.string().required(),
     nome: joi.string().required(),
     senha:joi.string().required()
-})
+});
+
+const postSchema = joi.object({
+    idUser: joi.required(),
+    description: joi.string().min(1).required(),
+    type: joi.string().min(1).required(),
+    value: joi.required(),
+    day: joi.required(),
+});
 
 
 
@@ -93,6 +100,79 @@ try{
       return res.sendStatus(error);
 
     }
+});
+
+
+app.get('/list', async (req,res)=>{
+    const {authorization} = req.headers;
+    const token = authorization?.replace('Bearer ', "");
+
+    if(!token){
+        res.status(401).send("erro1");
+    }
+
+    const session = await db.collection('sessions').findOne({token});
+
+    if(!session){
+        res.status(401).send("erro2");
+    }
+    console.log(session);
+    const user = await db.collection('users').findOne({
+        _id: session.userID
+    })
+    console.log(user);
+    if(user){
+        delete user.senha;
+    let posts = db.collection('list').find().toArray();
+    if(!posts){
+        posts = [];
+    res.send(posts);
+    }else{
+       const postUser = posts.filter((post)=> post.userId===user._id);
+       res.send(postUser);
+    }
+    }else{
+        res.status(401).send("erro3");
+    }
+});
+
+app.post('/list', async(req,res)=>{
+    const {value, type, description} = req.body;
+    const {authorization} = req.headers;
+    console.log(authorization)
+    const token = authorization?.replace('Bearer ', "");
+   console.log(value,type, description, token);
+
+   try{
+   const session = await db.collection('sessions').findOne({token});
+
+   if(!session){
+       res.status(401).send("erro2");
+   }
+   const user = await db.collection('users').findOne({
+       _id: session.userID
+   })
+
+   const day = dayjs().format('DD/MM');
+
+const objPost = {
+    value,
+    description,
+    type,
+    day,
+    idUser: user._id
+   };
+console.log(objPost)
+   const validation = postSchema.validate(objPost);
+   if(validation.error){
+    res.status(422).send(validation.error.details);
+   }else{
+    db.collection('list').insertOne(objPost);
+    res.sendStatus(201);
+   }
+   }catch{
+    res.status(401).send("erro3");
+   }
 })
 
 
