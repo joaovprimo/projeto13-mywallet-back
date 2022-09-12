@@ -84,14 +84,16 @@ try{
     const user = await db.collection('users').findOne({email});
     console.log(user);
     const password = user ? bcrypt.compareSync(senha, user.senha): false;
-    console.log(password);
     if(user && password){
+        db.collection('sessions').deleteMany({
+            userID: user._id
+           }) 
         const token = uuid();
         db.collection('sessions').insertOne({
          token,
          userID: user._id
         }) 
-        return res.send(token);
+        return res.send({nome:user.nome,token});
     }else{     
         return res.sendStatus(401);
     }}
@@ -116,21 +118,13 @@ app.get('/list', async (req,res)=>{
     if(!session){
         res.status(401).send("erro2");
     }
-    console.log(session);
     const user = await db.collection('users').findOne({
         _id: session.userID
     })
-    console.log(user);
     if(user){
         delete user.senha;
-    let posts = db.collection('list').find().toArray();
-    if(!posts){
-        posts = [];
-    res.send(posts);
-    }else{
-       const postUser = posts.filter((post)=> post.userId===user._id);
-       res.send(postUser);
-    }
+    let posts = await db.collection('list').find({idUser: user._id}).toArray();
+            res.send(posts)
     }else{
         res.status(401).send("erro3");
     }
@@ -139,7 +133,6 @@ app.get('/list', async (req,res)=>{
 app.post('/list', async(req,res)=>{
     const {value, type, description} = req.body;
     const {authorization} = req.headers;
-    console.log(authorization)
     const token = authorization?.replace('Bearer ', "");
    console.log(value,type, description, token);
 
