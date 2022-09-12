@@ -33,7 +33,6 @@ export async function singin(req,res){
 
 try{
     const user = await db.collection('users').findOne({email});
-    console.log(user);
     const password = user ? bcrypt.compareSync(senha, user.senha): false;
     if(user && password){
         db.collection('sessions').deleteMany({
