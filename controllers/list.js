@@ -1,6 +1,7 @@
 import dayjs from  'dayjs';
 import db from '../db/db.js'
 import joi from 'joi';
+import { ObjectId } from 'mongodb';
 
 const postSchema = joi.object({
     idUser: joi.required(),
@@ -37,4 +38,16 @@ export async function postList(req,res){
     db.collection('list').insertOne(objPost);
     res.sendStatus(201);
    }
+}
+
+export async function deleteInfo(req, res){
+    const {idInfo} = req.params;
+    console.log(idInfo);
+    try{
+    const deleting = await db.collection('list').deleteOne({_id: new ObjectId (idInfo)});
+    console.log(deleting)
+    res.send(deleting);
+    }catch(error){
+        res.status(500).send(error);
+    }
 }
